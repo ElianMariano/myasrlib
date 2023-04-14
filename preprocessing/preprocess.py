@@ -21,3 +21,10 @@ def denoise(rate, audio_signal) -> np.ndarray:
 
     # Noise reduced audio
     return nr.reduce_noise(y=audio_signal, sr=rate)
+
+def padding(y, maxwidth=20000) -> np.ndarray:
+    zero_padding = np.zeros(maxwidth - len(y))
+
+    audio = np.concatenate((y, zero_padding), axis=0)
+
+    return audio
