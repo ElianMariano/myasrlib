@@ -79,7 +79,7 @@ def read_audio_dataset(audio_files, root_dir='', withlabels=False) -> tf.Tensor:
 
     return dataset
 
-def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=500, options=['noisereduce', 'normalize', 'padding'], training=False, maxwidth=35000) -> tf.Tensor:
+def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=500, options=['noisereduce', 'normalize', 'padding'], training=False, maxwidth=20000) -> tf.Tensor:
     """
         Works the same way as the function read_single_audio, but the only difference is the audio comes
         divided according with specific label timestamps.
@@ -137,7 +137,7 @@ def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=5
         else:
             audio_frames = np.concatenate((audio_frames, audio), axis=0)
 
-    return tf.convert_to_tensor(audio_frames, dtype=tf.int32)
+    return tf.convert_to_tensor(audio_frames, dtype=tf.float32)
 
 def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN'):
   """ Returns the whole dataset divided by frames and the corresponding label for each frame
@@ -148,7 +148,7 @@ def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN'):
     label_file = re.sub(r"(\.WAV)(\.wav)", label_extension, file)
 
     timestamps = pd.read_csv(os.path.join(root_dir, label_file), ' ', header=None).to_numpy()
-    
+
     classes = read_label_classes()
 
     y, sr = librosa.load(os.path.join(root_dir, file))
@@ -165,10 +165,12 @@ def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN'):
       input = audio
     else:
       input = np.concatenate((input, audio), axis=0)
-    
+
     if len(output) == 0:
       output = prob_timestamps
     else:
       output = np.concatenate((output, prob_timestamps), axis=0)
+
+    output = tf.convert_to_tensor(output, dtype=tf.int32)
 
   return (input, output)

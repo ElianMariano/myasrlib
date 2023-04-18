@@ -130,3 +130,5 @@ dmypy.json
 
 # Ignores the TIMIT dataset
 timit/
+
+save_model/
