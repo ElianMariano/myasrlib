@@ -23,3 +23,13 @@ def read_label(file_name, classes) -> tf.Tensor:
         data = np.concatenate([data, prob], axis=0)
 
     return tf.convert_to_tensor(data)
+
+def read_label_sparse(file_name, classes) -> tf.Tensor:
+  timestamps = pd.read_csv(file_name, ' ', header=None).to_numpy()
+
+  data = np.array([], dtype=np.int32)
+
+  for timestamp in timestamps:
+    data = np.concatenate((data, np.array([classes.index(timestamp[2])])), axis=0)
+
+  return tf.convert_to_tensor(data, dtype=tf.int32)

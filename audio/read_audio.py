@@ -4,8 +4,8 @@ import tensorflow as tf
 import os
 import re
 import pandas as pd
-from preprocessing.preprocess import normalize, denoise, padding
-from dataset.label_reader import read_label_classes
+from preprocessing.preprocess import normalize, denoise, padding, resize
+from dataset.label_reader import read_label_classes, read_label_sparse
 from tqdm import tqdm
 
 def read_single_audio(file_name, nmels=128, fmax=8000, hop_length=500, options=['noisereduce', 'normalize', 'padding'], training=False, maxwidth=500000) -> tf.Tensor:
@@ -51,6 +51,10 @@ def read_single_audio(file_name, nmels=128, fmax=8000, hop_length=500, options=[
         y = padding(y, maxwidth=maxwidth)
     
     audio = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=nmels, fmax=fmax, hop_length=hop_length)
+    audio = tf.convert_to_tensor(audio, dtype=tf.float32)[tf.newaxis, ...]
+
+    if 'resize' in options and not training:
+        audio = resize(audio)
 
     return tf.convert_to_tensor(audio, dtype=tf.int32)
 
@@ -79,7 +83,7 @@ def read_audio_dataset(audio_files, root_dir='', withlabels=False) -> tf.Tensor:
 
     return dataset
 
-def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=500, options=['noisereduce', 'normalize', 'padding'], training=False, maxwidth=20000) -> tf.Tensor:
+def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=500, options=['noisereduce', 'normalize', 'resize'], training=False, maxwidth=100000) -> tf.Tensor:
     """
         Works the same way as the function read_single_audio, but the only difference is the audio comes
         divided according with specific label timestamps.
@@ -109,7 +113,7 @@ def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=5
         S : np.ndarray [shape=(..., n_mels, t)]
             Mel spectrogram
     """
-    audio_frames = np.array([])
+    audio_frames = tf.constant([], dtype=tf.float32)
 
     audio_series = y
 
@@ -128,18 +132,24 @@ def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=5
 
         # Spectrogram
         audio = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=nmels, fmax=fmax, hop_length=hop_length)
+        audio = tf.convert_to_tensor(audio, dtype=tf.float32)[tf.newaxis, ...]
+
+        # print(audio.shape)
+        if 'resize' in options and not training:
+            audio = resize(audio)
 
         # Reshape the spectrogram
-        audio = np.reshape(audio, (1, audio.shape[0], audio.shape[1]))
+        # audio = np.reshape(audio, (1, audio.shape[0], audio.shape[1]))
 
         if len(audio_frames) == 0:
             audio_frames = audio
         else:
-            audio_frames = np.concatenate((audio_frames, audio), axis=0)
+            # audio_frames = np.concatenate((audio_frames, audio), axis=0)
+            audio_frames = tf.concat([audio_frames, audio], axis=0)
 
-    return tf.convert_to_tensor(audio_frames, dtype=tf.float32)
+    return audio_frames
 
-def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN'):
+def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN', sparse=True):
   """ Returns the whole dataset divided by frames and the corresponding label for each frame
   """
   input, output = np.array([]), np.array([])
@@ -153,24 +163,30 @@ def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN'):
 
     y, sr = librosa.load(os.path.join(root_dir, file))
 
-    audio = read_audio_with_frames(y, sr, timestamps)
-
-    # Create a prob matrix for the timestamps
-    prob_timestamps = np.zeros((timestamps.shape[0], len(classes)), dtype=np.int32)
-
-    for i in range(0, len(timestamps)):
-      prob_timestamps[i][classes.index(timestamps[i][2])] = 1
+    audio = read_audio_with_frames(y, sr, timestamps) # Test with resizing
 
     if len(input) == 0:
       input = audio
     else:
       input = np.concatenate((input, audio), axis=0)
 
-    if len(output) == 0:
-      output = prob_timestamps
+    if sparse:
+       if len(output) == 0:
+           output = read_label_sparse(os.path.join(root_dir, label_file), classes)
+       else:
+           output = tf.concat([output, read_label_sparse(os.path.join(root_dir, label_file), classes)], axis=0)
     else:
-      output = np.concatenate((output, prob_timestamps), axis=0)
+       # Create a prob matrix for the timestamps
+        prob_timestamps = np.zeros((timestamps.shape[0], len(classes)), dtype=np.int32)
 
-    output = tf.convert_to_tensor(output, dtype=tf.int32)
+        for i in range(0, len(timestamps)):
+            prob_timestamps[i][classes.index(timestamps[i][2])] = 1
+
+        if len(output) == 0:
+            output = prob_timestamps
+        else:
+            output = np.concatenate((output, prob_timestamps), axis=0)
+
+        output = tf.convert_to_tensor(output, dtype=tf.int32)
 
   return (input, output)

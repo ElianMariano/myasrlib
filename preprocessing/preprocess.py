@@ -1,5 +1,6 @@
 import numpy as np
 import noisereduce as nr
+import tensorflow as tf
 
 def normalize(audio_signal) -> np.ndarray:
     ratio = 32767 / np.max(np.abs(audio_signal))
@@ -25,6 +26,12 @@ def denoise(rate, audio_signal) -> np.ndarray:
 def padding(y, maxwidth=20000) -> np.ndarray:
     zero_padding = np.zeros(maxwidth - len(y))
 
-    audio = np.concatenate((y, zero_padding), axis=0)
+    audio = np.concatenate((zero_padding, y), axis=0)
 
     return audio
+
+def resize(spectrogram, width=30) -> tf.Tensor:
+    spectrogram = tf.image.resize(spectrogram[..., tf.newaxis], [spectrogram.shape[1], width], method='nearest')
+    spectrogram = tf.reshape(spectrogram, spectrogram.shape[:-1])
+
+    return spectrogram
