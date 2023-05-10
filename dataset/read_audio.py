@@ -4,9 +4,10 @@ import tensorflow as tf
 import os
 import re
 import pandas as pd
-from preprocessing.preprocess import normalize, denoise, padding, resize
+from preprocess import normalize, denoise, padding, resize
 from dataset.label_reader import read_label_classes, read_label_sparse
 from tqdm import tqdm
+from random import randint
 
 def read_single_audio(file_name, nmels=128, fmax=8000, hop_length=500, options=['noisereduce', 'normalize', 'padding'], training=False, maxwidth=500000) -> tf.Tensor:
     """Reads a single audio file and peforms basic preprocessing operations if necessary.
@@ -83,7 +84,7 @@ def read_audio_dataset(audio_files, root_dir='', withlabels=False) -> tf.Tensor:
 
     return dataset
 
-def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=500, options=['noisereduce', 'normalize', 'resize'], training=False, maxwidth=100000) -> tf.Tensor:
+def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=100, options=['noisereduce', 'normalize', 'resize'], training=False, maxwidth=100000) -> tf.Tensor:
     """
         Works the same way as the function read_single_audio, but the only difference is the audio comes
         divided according with specific label timestamps.
@@ -149,17 +150,32 @@ def read_audio_with_frames(y, sr, timestamps, nmels=128, fmax=8000, hop_length=5
 
     return audio_frames
 
-def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN', sparse=True):
+def predicate(timestamps, most_shown_labels=['h#', 's', 'n', 'l', 'r', 'iy', 'ih', 'ix', 'dcl', 'kcl', 'tcl']) -> np.array:
+    PROB = True if randint(0, 2) == 1 else False
+
+    newTimestamps = np.empty((0, timestamps.shape[1]))
+    for i in range(0, len(timestamps)):
+        if timestamps[i][2] in most_shown_labels:
+            if PROB:
+                newTimestamps = np.concatenate((newTimestamps, np.reshape(timestamps[i], (1, timestamps.shape[1]))), axis=0)
+        else:
+            newTimestamps = np.concatenate((newTimestamps, np.reshape(timestamps[i], (1, timestamps.shape[1]))), axis=0)
+    return newTimestamps
+
+def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN', sparse=True, filter=False):
   """ Returns the whole dataset divided by frames and the corresponding label for each frame
   """
   input, output = np.array([]), np.array([])
 
-  for file in tqdm(audio_files):
+  for file in tqdm(audio_files):    
     label_file = re.sub(r"(\.WAV)(\.wav)", label_extension, file)
 
     timestamps = pd.read_csv(os.path.join(root_dir, label_file), ' ', header=None).to_numpy()
 
     classes = read_label_classes()
+
+    if filter:
+        timestamps = predicate(timestamps)
 
     y, sr = librosa.load(os.path.join(root_dir, file))
 
@@ -168,15 +184,13 @@ def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN', s
     if len(input) == 0:
       input = audio
     else:
-      input = np.concatenate((input, audio), axis=0)
+      input = tf.concat([input, audio], axis=0)
 
     if sparse:
-       if len(output) == 0:
-           output = read_label_sparse(os.path.join(root_dir, label_file), classes)
-       else:
-           output = tf.concat([output, read_label_sparse(os.path.join(root_dir, label_file), classes)], axis=0)
+        for i in range(0, len(timestamps)):
+            output = np.concatenate((output, [classes.index(timestamps[i][2])]), axis=0)
     else:
-       # Create a prob matrix for the timestamps
+        # Create a prob matrix for the timestamps
         prob_timestamps = np.zeros((timestamps.shape[0], len(classes)), dtype=np.int32)
 
         for i in range(0, len(timestamps)):
@@ -188,5 +202,7 @@ def read_dataset_with_frames(audio_files, root_dir='', label_extension='.PHN', s
             output = np.concatenate((output, prob_timestamps), axis=0)
 
         output = tf.convert_to_tensor(output, dtype=tf.int32)
+
+  input = input[..., tf.newaxis] # Adds new axis for image channel
 
   return (input, output)

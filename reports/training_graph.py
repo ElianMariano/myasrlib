@@ -8,7 +8,7 @@ if __name__ == '__main__':
     warnings.simplefilter(action='ignore', category=FutureWarning)
     
     file_name = sys.argv[1]
-
+        
     data = pd.read_csv(file_name, ',', header=None).to_numpy()
 
     accuracy = np.fromiter(map(lambda x: x[1], data[1:]), dtype=np.float32)
