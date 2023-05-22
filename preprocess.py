@@ -30,8 +30,19 @@ def padding(y, maxwidth=20000) -> np.ndarray:
 
     return audio
 
-def resize(spectrogram, width=30) -> tf.Tensor:
-    spectrogram = tf.image.resize(spectrogram[..., tf.newaxis], [spectrogram.shape[1], width], method='nearest')
-    spectrogram = tf.reshape(spectrogram, spectrogram.shape[:-1])
+def resize(spectrogram, width, height) -> tf.Tensor:
+    return tf.image.resize(spectrogram[..., tf.newaxis], [width, height], method='nearest')[tf.newaxis, ...]
+
+def specnorm(spectrogram) -> tf.Tensor:
+    means = tf.math.reduce_mean(spectrogram, 1, keepdims=True)
+    stddevs = tf.math.reduce_std(spectrogram, 1, keepdims=True)
+    spectrogram = (spectrogram - means) / (stddevs + 1e-10)
+
+    return spectrogram
+
+def specmag(spectrogram) -> tf.Tensor:
+    """Filters only the magnitude"""
+    spectrogram = tf.abs(spectrogram)
+    spectrogram = tf.math.pow(spectrogram, 0.5)
 
     return spectrogram
