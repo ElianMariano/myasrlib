@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-def read_label_classes(file_name='labels.csv') -> list:
+def read_label_classes(file_name='silables.csv') -> list:
     labels = pd.read_csv(file_name).set_index('phoneme_label').T.to_dict('list')
 
     return list(map(lambda x: x, labels))

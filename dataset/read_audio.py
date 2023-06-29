@@ -4,7 +4,7 @@ import tensorflow as tf
 import os
 import re
 import pandas as pd
-from preprocess import normalize, denoise, padding, resize, specmag, specnorm
+from preprocess import normalize, denoise, padding, resize, specmag, specnorm, random_pitch, white_noise
 from dataset.label_reader import read_label_classes, read_label_sparse
 from tqdm import tqdm
 from random import randint
@@ -30,8 +30,9 @@ def read_single_audio(file):
     FRAME_LENGTH = int(config['frame_length'])
     FRAME_STEP = int(config['frame_step'])
     PREPROCESSING = config['preprocessing'].split(',')
-    
-    phn_file = re.sub(r"(\.WAV)(\.wav)", '.PHN', file)
+    AUGMENTATION = True if config['augmentation'] == 'true' else False
+
+    phn_file = re.sub(r"(\.wav)", '.PHN', file)
 
     timestamps = pd.read_csv(phn_file, ' ', header=None).to_numpy()
 
@@ -46,8 +47,19 @@ def read_single_audio(file):
 
     y, sr = librosa.load(file)
 
+    # data augmentation
+    if AUGMENTATION:
+        y = white_noise(y)
+
+        y = random_pitch(y, sr)
+
     for i in range(0, len(timestamps)):
         frame = y[timestamps[i][0]:timestamps[i][1]]
+
+        # For this dataset
+        if len(frame) < 10:
+            frame = np.concatenate((frame, np.array([0]*(10-len(frame)), dtype=np.float32)), axis=0)
+
         spectrogram = tf.signal.stft(frame, frame_length=FRAME_LENGTH, frame_step=FRAME_STEP)
 
         if 'specmag' in PREPROCESSING:

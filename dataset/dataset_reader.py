@@ -12,4 +12,4 @@ def read_file(file_name, root_dir='') -> list:
 
     data = list(map(lambda x: x[0], data.values.tolist()))
 
-    return list(filter(lambda x: x[-7:] == 'WAV.wav', data))
+    return list(filter(lambda x: x.endswith('.wav'), data))

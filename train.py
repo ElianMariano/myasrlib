@@ -20,13 +20,19 @@ if __name__ == '__main__':
     TRAINING_FILES = config['training_files'].split(',')
     test_files = read_file('test_data_sm.csv', root_dir='timit') # TODO Hard encoded test data
 
-    print('Loading testing data')
-    (x_test, y_test) = read_dataset(test_files, root_dir=os.path.join('timit', 'data'))
+    # print('Loading testing data')
+    # (x_test, y_test) = read_dataset(test_files, root_dir=os.path.join('timit', 'data'))
 
-    if SPARSE:
-        model = create_model(x_test.shape[1:], y_test.shape[0], 128, 7, 280) # TODO Hard encoded neurons
-    else:
-        model = create_model(x_test.shape[1:], y_test.shape[1], 128, 7, 280)
+    # if SPARSE:
+    #     model = create_model(x_test.shape[1:], y_test.shape[0], 128, 7, 280) # TODO Hard encoded neurons
+    # else:
+    #     model = create_model(x_test.shape[1:], y_test.shape[1], 128, 7, 280)
+    train_files = read_file(TRAINING_FILES[0], root_dir='data')
+
+    print('Loading training data')
+    (x_train, y_train) = read_dataset(train_files, root_dir=os.path.join('data'))
+
+    model = create_model(x_train.shape[1:], y_train.shape[0], 128, 7, 280)
 
     opt = tf.keras.optimizers.Adam(learning_rate=1e-3) # TODO Hard encoded learning rate
 
@@ -38,13 +44,14 @@ if __name__ == '__main__':
 
     csv_logger = CSVLogger('training.csv', ',', True)
 
-    for file in TRAINING_FILES:
-        train_files = read_file(file, root_dir='timit')
+    # for file in TRAINING_FILES:
+    #     train_files = read_file(file, root_dir='timit')
 
-        print('Loading training data')
-        (x_train, y_train) = read_dataset(train_files, root_dir=os.path.join('timit', 'data')) # , sparse=SPARSE, filter=True
+    #     print('Loading training data')
+    #     (x_train, y_train) = read_dataset(train_files, root_dir=os.path.join('timit', 'data')) # , sparse=SPARSE, filter=True
 
-        model.fit(x_train, y_train, epochs=EPOCH, batch_size=BATCH_SIZE, callbacks=[csv_logger], validation_data=(x_test, y_test))
+    #     model.fit(x_train, y_train, epochs=EPOCH, batch_size=BATCH_SIZE, callbacks=[csv_logger]) #validation_data=(x_test, y_test)
+    model.fit(x_train, y_train, epochs=EPOCH, batch_size=BATCH_SIZE, callbacks=[csv_logger])
 
     print('Saving Model')
     model.save('save_model/model')

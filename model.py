@@ -4,9 +4,6 @@ from tensorflow.keras.models import Sequential
 
 def create_model(input_shape, output_len, n_conv, n_hidden, n_dense, batchnorm=True):
     model = Sequential()
-    # Data augmentation
-    # model.add(RandomFlip("horizontal_and_vertical"))
-    # model.add(RandomRotation(0.2))
     model.add(Conv2D(n_conv, kernel_size=(3, 3), activation='relu', input_shape=input_shape, padding='same', kernel_initializer='ones'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     if (batchnorm):

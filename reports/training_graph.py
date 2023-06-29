@@ -15,9 +15,9 @@ if __name__ == '__main__':
 
     loss = np.fromiter(map(lambda x: x[2], data[1:]), dtype=np.float32)
 
-    val_accuracy = np.fromiter(map(lambda x: x[3], data[1:]), dtype=np.float32)
+    # val_accuracy = np.fromiter(map(lambda x: x[3], data[1:]), dtype=np.float32)
 
-    val_loss = np.fromiter(map(lambda x: x[4], data[1:]), dtype=np.float32)
+    # val_loss = np.fromiter(map(lambda x: x[4], data[1:]), dtype=np.float32)
 
     x = np.arange(0, len(accuracy), 1, dtype=np.int16)
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     plt.ylabel('Value')
     plt.plot(x, accuracy, label='accuracy')
     plt.plot(x, loss, label='loss')
-    plt.plot(x, val_accuracy, label='val_accuracy')
-    plt.plot(x, val_loss, label='val_loss')
+    # plt.plot(x, val_accuracy, label='val_accuracy')
+    # plt.plot(x, val_loss, label='val_loss')
     plt.legend()
     plt.show()

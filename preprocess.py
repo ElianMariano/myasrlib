@@ -46,3 +46,12 @@ def specmag(spectrogram) -> tf.Tensor:
     spectrogram = tf.math.pow(spectrogram, 0.5)
 
     return spectrogram
+
+def white_noise(audio) -> tf.Tensor:
+    noise_factor = random.uniform(0.001, 0.01)
+    white_noise = np.random.randn(len(audio)) * noise_factor
+
+    return audio + white_noise
+
+def random_pitch(audio, sr) -> np.ndarray:
+    return librosa.effects.pitch_shift(y=y, sr=sr, n_steps=random.uniform(-10, 10))

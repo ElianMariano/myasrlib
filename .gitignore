@@ -132,3 +132,4 @@ dmypy.json
 timit/
 
 save_model/
+data/
